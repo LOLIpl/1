@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RandomCash</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        .token-counter {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .bet-section, .game-mode-section {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .result {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #randomNumber, #sumResult, #highRandomNumber {
+            font-size: 2em;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        .mode-description {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #555;
+        }
+
+        /* Motywy */
+        .theme-dark {
+            background-color: #333;
+            color: #f0f0f0;
+        }
+
+        .theme-light {
+            background-color: #f0f0f5;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RandomCash</h1>
+
+        <div class="token-counter">Aktualna liczba żetonów: <span id="tokenCount">0</span></div>
+
+        <!-- Sekcja zakupu żetonów -->
+        <div class="bet-section">
+            <form id="tokenPurchaseForm">
+                <label for="amount">Kup żetony:</label>
+                <input type="number" id="amount" min="1" placeholder="Wprowadź kwotę">
+                <button type="submit">Kup żetony</button>
+            </form>
+        </div>
+
+        <!-- Sekcja wyboru trybu gry -->
+        <div class="game-mode-section">
+            <label>Wybierz tryb gry:</label>
+            <div>
+                <label><input type="radio" name="gameMode" value="single" checked> Zgadnij liczbę (1-6) - Mnożnik x3</label>
+                <label><input type="radio" name="gameMode" value="sum"> Zgadnij sumę dwóch liczb (1-6) - Mnożnik x5</label>
+                <label><input type="radio" name="gameMode" value="high"> Zgadnij liczbę (1-60) - Mnożnik x20</label>
+            </div>
+        </div>
+
+        <!-- Gra: Zgadnij liczbę (1-6) -->
+        <div id="numberGuessing" class="game-mode">
+            <form id="numberGuessingForm">
+                <label for="guessNumber">Zgadnij liczbę (1-6):</label>
+                <input type="number" id="guessNumber" min="1" max="6">
+                <label for="betAmount">Obstaw kwotę:</label>
+                <input type="number" id="betAmount" min="1">
+                <button type="submit">Zagraj</button>
+            </form>
+            <div id="randomNumber"></div>
+            <div class="result" id="gameResult"></div>
+        </div>
+
+        <!-- Gra: Zgadnij sumę (1-6) -->
+        <div id="sumGuessing" class="game-mode" style="display:none;">
+            <form id="sumGuessingForm">
+                <label for="guessSum">Zgadnij sumę dwóch liczb (2-12):</label>
+                <input type="number" id="guessSum" min="2" max="12">
+                <label for="betAmountSum">Obstaw kwotę:</label>
+                <input type="number" id="betAmountSum" min="1">
+                <button type="submit">Zagraj</button>
+            </form>
+            <div id="sumResult"></div>
+            <div class="result" id="sumGameResult"></div>
+        </div>
+
+        <!-- Gra: Zgadnij liczbę (1-60) -->
+        <div id="highNumberGuessing" class="game-mode" style="display:none;">
+            <form id="highNumberGuessingForm">
+                <label for="guessHighNumber">Zgadnij liczbę (1-60):</label>
+                <input type="number" id="guessHighNumber" min="1" max="60">
+                <label for="betAmountHigh">Obstaw kwotę:</label>
+                <input type="number" id="betAmountHigh" min="1">
+                <button type="submit">Zagraj</button>
+            </form>
+            <div id="highRandomNumber"></div>
+            <div class="result" id="highGameResult"></div>
+        </div>
+    </div>
+
+    <script>
+        let totalTokens = 0;
+        let isDrawing = false;
+
+        // Funkcja do aktualizacji licznika żetonów
+        function updateTokenCounter() {
+            document.getElementById('tokenCount').textContent = totalTokens;
+        }
+
+        // Obsługa zakupu żetonów
+        document.getElementById('tokenPurchaseForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const amount = parseInt(document.getElementById('amount').value);
+            totalTokens += amount;
+            updateTokenCounter();
+            this.reset();
+        });
+
+        // Funkcja do animacji losowania liczby
+        function animateRandomNumber(callback) {
+            const randomNumberElement = document.getElementById('randomNumber');
+            let count = 0;
+            const interval = setInterval(() => {
+                const randomNum = Math.floor(Math.random() * 6) + 1;
+                randomNumberElement.textContent = randomNum;
+                randomNumberElement.style.color = getRandomColor();
+                count++;
+                if (count === 15) {
+                    clearInterval(interval);
+                    const finalNumber = Math.floor(Math.random() * 6) + 1;
+                    randomNumberElement.textContent = finalNumber;
+                    callback(finalNumber);
+                }
+            }, 200);
+        }
+
+        // Funkcja do animacji sumy
+        function animateSum(callback) {
+            const sumResultElement = document.getElementById('sumResult');
+            let count = 0;
+            const interval = setInterval(() => {
+                const randomNum1 = Math.floor(Math.random() * 6) + 1;
+                const randomNum2 = Math.floor(Math.random() * 6) + 1;
+                const sum = randomNum1 + randomNum2;
+                sumResultElement.textContent = sum;
+                count++;
+                if (count === 15) {
+                    clearInterval(interval);
+                    const finalSum = randomNum1 + randomNum2;
+                    sumResultElement.textContent = finalSum;
+                    callback(finalSum);
+                }
+            }, 200);
+        }
+
+        // Losowanie liczby 1-60
+        function animateHighRandomNumber(callback) {
+            const highRandomNumberElement = document.getElementById('highRandomNumber');
+            let count = 0;
+            const interval = setInterval(() => {
+                const randomNum = Math.floor(Math.random() * 60) + 1;
+                highRandomNumberElement.textContent = randomNum;
+                count++;
+                if (count === 15) {
+                    clearInterval(interval);
+                    const finalHighNumber = Math.floor(Math.random() * 60) + 1;
+                    highRandomNumberElement.textContent = finalHighNumber;
+                    callback(finalHighNumber);
+                }
+            }, 200);
+        }
+
+        // Funkcja do losowania koloru
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Obsługa gry "Zgadnij liczbę"
+        document.getElementById('numberGuessingForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (isDrawing) return;  // Zablokuj możliwość dalszej gry podczas losowania
+            isDrawing = true;
+
+            const guessNumber = parseInt(document.getElementById('guessNumber').value);
+            const betAmount = parseInt(document.getElementById('betAmount').value);
+
+            if (betAmount > totalTokens) {
+                alert("Nie masz wystarczającej liczby żetonów!");
+                isDrawing = false;
+                return;
+            }
+
+            totalTokens -= betAmount;
+            updateTokenCounter();
+
+            animateRandomNumber(finalNumber => {
+                let winnings = 0;
+                if (guessNumber === finalNumber) {
+                    winnings = betAmount * 3;  // Mnożnik x3
+                    totalTokens += winnings;
+                    document.getElementById('gameResult').textContent = `Brawo! Zgadłeś! Liczba to ${finalNumber}. Zyskujesz ${winnings} żetonów!`;
+                } else {
+                    document.getElementById('gameResult').textContent = `Niestety, nie zgadłeś. Liczba to ${finalNumber}. Tracisz ${betAmount} żetonów!`;
+                }
+                updateTokenCounter();
+                isDrawing = false;
+                document.getElementById('numberGuessingForm').reset();
+            });
+        });
+
+        // Obsługa gry "Zgadnij sumę"
+        document.getElementById('sumGuessingForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (isDrawing) return;
+            isDrawing = true;
+
+            const guessSum = parseInt(document.getElementById('guessSum').value);
+            const betAmountSum = parseInt(document.getElementById('betAmountSum').value);
+
+            if (betAmountSum > totalTokens) {
+                alert("Nie masz wystarczającej liczby żetonów!");
+                isDrawing = false;
+                return;
+            }
+
+            totalTokens -= betAmountSum;
+            updateTokenCounter();
+
+            animateSum(finalSum => {
+                let winnings = 0;
+                if (guessSum === finalSum) {
+                    winnings = betAmountSum * 5;  // Mnożnik x5
+                    totalTokens += winnings;
+                    document.getElementById('sumGameResult').textContent = `Brawo! Zgadłeś! Suma to ${finalSum}. Zyskujesz ${winnings} żetonów!`;
+                } else {
+                    document.getElementById('sumGameResult').textContent = `Niestety, nie zgadłeś. Suma to ${finalSum}. Tracisz ${betAmountSum} żetonów!`;
+                }
+                updateTokenCounter();
+                isDrawing = false;
+                document.getElementById('sumGuessingForm').reset();
+            });
+        });
+
+        // Obsługa gry "Zgadnij liczbę 1-60"
+        document.getElementById('highNumberGuessingForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (isDrawing) return;
+            isDrawing = true;
+
+            const guessHighNumber = parseInt(document.getElementById('guessHighNumber').value);
+            const betAmountHigh = parseInt(document.getElementById('betAmountHigh').value);
+
+            if (betAmountHigh > totalTokens) {
+                alert("Nie masz wystarczającej liczby żetonów!");
+                isDrawing = false;
+                return;
+            }
+
+            totalTokens -= betAmountHigh;
+            updateTokenCounter();
+
+            animateHighRandomNumber(finalHighNumber => {
+                let winnings = 0;
+                if (guessHighNumber === finalHighNumber) {
+                    winnings = betAmountHigh * 20;  // Mnożnik x20
+                    totalTokens += winnings;
+                    document.getElementById('highGameResult').textContent = `Brawo! Zgadłeś! Liczba to ${finalHighNumber}. Zyskujesz ${winnings} żetonów!`;
+                } else {
+                    document.getElementById('highGameResult').textContent = `Niestety, nie zgadłeś. Liczba to ${finalHighNumber}. Tracisz ${betAmountHigh} żetonów!`;
+                }
+                updateTokenCounter();
+                isDrawing = false;
+                document.getElementById('highNumberGuessingForm').reset();
+            });
+        });
+
+        // Obsługa zmiany trybu gry
+        const gameModeRadios = document.querySelectorAll('input[name="gameMode"]');
+        gameModeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.getElementById('numberGuessing').style.display = this.value === 'single' ? 'block' : 'none';
+                document.getElementById('sumGuessing').style.display = this.value === 'sum' ? 'block' : 'none';
+                document.getElementById('highNumberGuessing').style.display = this.value === 'high' ? 'block' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>
