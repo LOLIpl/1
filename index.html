@@ -53,6 +53,11 @@
     </div>
 
     <script>
+        const GITHUB_TOKEN = "TWÓJ_GITHUB_TOKEN"; // Wstaw swój token tutaj
+        const REPO_OWNER = "TWÓJ_GITHUB_USERNAME"; // Wstaw swoją nazwę użytkownika GitHub
+        const REPO_NAME = "NAZWA_REPO"; // Wstaw nazwę repozytorium
+        const USERS_FILE = "users.json"; // Plik przechowujący dane użytkowników
+
         let isRegistering = false;
 
         function toggleForm() {
@@ -63,7 +68,50 @@
             document.getElementById("message").innerText = "";
         }
 
-        function handleAuth() {
+        async function fetchUsers() {
+            const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${USERS_FILE}`;
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${GITHUB_TOKEN}`,
+                    Accept: "application/vnd.github.v3+json"
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const content = atob(data.content); // Dekoduj z Base64
+                return JSON.parse(content);
+            }
+            return {};
+        }
+
+        async function saveUsers(users) {
+            const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${USERS_FILE}`;
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${GITHUB_TOKEN}`,
+                    Accept: "application/vnd.github.v3+json"
+                }
+            });
+            const data = await response.json();
+            const sha = data.sha; // SHA pliku do aktualizacji
+
+            const content = btoa(JSON.stringify(users)); // Zakoduj do Base64
+            await fetch(url, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${GITHUB_TOKEN}`,
+                    Accept: "application/vnd.github.v3+json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: "Aktualizacja użytkowników",
+                    content: content,
+                    sha: sha
+                })
+            });
+        }
+
+        async function handleAuth() {
             let username = document.getElementById("username").value.trim();
             let password = document.getElementById("password").value.trim();
             if (!username || !password) {
@@ -71,14 +119,14 @@
                 return;
             }
 
-            let users = JSON.parse(localStorage.getItem("users")) || {};
+            const users = await fetchUsers();
 
             if (isRegistering) {
                 if (users[username]) {
                     document.getElementById("message").innerText = "Nazwa użytkownika jest już zajęta!";
                 } else {
                     users[username] = password;
-                    localStorage.setItem("users", JSON.stringify(users));
+                    await saveUsers(users);
                     document.getElementById("message").innerText = "Rejestracja udana! Możesz się teraz zalogować.";
                     toggleForm();
                 }
