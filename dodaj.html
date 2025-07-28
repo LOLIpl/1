@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Dodaj film – filmgoogler</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>➕ Dodaj nowy film</h1>
+    <nav>
+      <a href="index.html">🏠 Wróć do przeglądu</a>
+    </nav>
+  </header>
+
+  <main>
+    <form id="addMovieForm">
+      <input type="text" id="title" placeholder="Tytuł filmu" required>
+      <input type="url" id="videoUrl" placeholder="Link do filmu (.mp4/.webm/.mkv)" required>
+      <input type="url" id="thumbnailUrl" placeholder="Link do miniaturki" required>
+      <button type="submit">💾 Zapisz film</button>
+    </form>
+  </main>
+
+  <footer>
+    <p>© 2025 filmgoogler</p>
+  </footer>
+
+<script>
+  document.getElementById("addMovieForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const title = document.getElementById("title").value.trim();
+    const videoUrl = document.getElementById("videoUrl").value.trim();
+    const thumbnailUrl = document.getElementById("thumbnailUrl").value.trim();
+
+    if (!title || !videoUrl || !thumbnailUrl) {
+      alert("Wypełnij wszystkie pola!");
+      return;
+    }
+
+    let movies = [];
+
+    try {
+      const stored = localStorage.getItem("movies");
+      movies = stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      console.error("Błąd odczytu localStorage:", err);
+      movies = [];
+    }
+
+    movies.push({ title, videoUrl, thumbnailUrl });
+
+    try {
+      localStorage.setItem("movies", JSON.stringify(movies));
+      alert("✅ Film dodany!");
+      window.location.href = "index.html"; // przekierowanie
+    } catch (err) {
+      console.error("Błąd zapisu localStorage:", err);
+      alert("❌ Nie udało się zapisać filmu.");
+    }
+  });
+</script>
+
+</body>
+</html>

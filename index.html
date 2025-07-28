@@ -1,144 +1,34 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logowanie i Rejestracja</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            background: white;
-            max-width: 400px;
-            margin: 100px auto;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        input, button {
-            width: 80%;
-            padding: 10px;
-            margin: 10px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-        }
-        button {
-            background: #007BFF;
-            color: white;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        .switch {
-            cursor: pointer;
-            color: #007BFF;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Odtwarzacz filmów</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1 id="form-title">Zaloguj się</h1>
-        <input type="text" id="username" placeholder="Nazwa użytkownika" required>
-        <input type="password" id="password" placeholder="Hasło" required>
-        <button onclick="handleAuth()">Zaloguj</button>
-        <p id="message"></p>
-        <p class="switch" onclick="toggleForm()">Nie masz konta? Zarejestruj się!</p>
+  <header>
+    <h1>🎬 Moja Biblioteka Filmów</h1>
+    <nav>
+      <a href="dodaj.html">➕ Dodaj film</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="gallery" id="movieGallery"></div>
+
+    <div class="player-container" id="playerContainer">
+      <div class="player-box">
+        <h2 id="playerTitle"></h2>
+        <video id="videoPlayer" controls></video>
+        <button onclick="closePlayer()">✖ Zamknij</button>
+      </div>
     </div>
+  </main>
 
-    <script>
-        const GITHUB_TOKEN = "TWÓJ_GITHUB_TOKEN"; // Wstaw swój token tutaj
-        const REPO_OWNER = "TWÓJ_GITHUB_USERNAME"; // Wstaw swoją nazwę użytkownika GitHub
-        const REPO_NAME = "NAZWA_REPO"; // Wstaw nazwę repozytorium
-        const USERS_FILE = "users.json"; // Plik przechowujący dane użytkowników
+  <footer>
+    <p>© 2025 filmgoogler</p>
+  </footer>
 
-        let isRegistering = false;
-
-        function toggleForm() {
-            isRegistering = !isRegistering;
-            document.getElementById("form-title").innerText = isRegistering ? "Rejestracja" : "Zaloguj się";
-            document.querySelector("button").innerText = isRegistering ? "Zarejestruj" : "Zaloguj";
-            document.querySelector(".switch").innerText = isRegistering ? "Masz już konto? Zaloguj się!" : "Nie masz konta? Zarejestruj się!";
-            document.getElementById("message").innerText = "";
-        }
-
-        async function fetchUsers() {
-            const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${USERS_FILE}`;
-            const response = await fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${GITHUB_TOKEN}`,
-                    Accept: "application/vnd.github.v3+json"
-                }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                const content = atob(data.content); // Dekoduj z Base64
-                return JSON.parse(content);
-            }
-            return {};
-        }
-
-        async function saveUsers(users) {
-            const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${USERS_FILE}`;
-            const response = await fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${GITHUB_TOKEN}`,
-                    Accept: "application/vnd.github.v3+json"
-                }
-            });
-            const data = await response.json();
-            const sha = data.sha; // SHA pliku do aktualizacji
-
-            const content = btoa(JSON.stringify(users)); // Zakoduj do Base64
-            await fetch(url, {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bearer ${GITHUB_TOKEN}`,
-                    Accept: "application/vnd.github.v3+json",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    message: "Aktualizacja użytkowników",
-                    content: content,
-                    sha: sha
-                })
-            });
-        }
-
-        async function handleAuth() {
-            let username = document.getElementById("username").value.trim();
-            let password = document.getElementById("password").value.trim();
-            if (!username || !password) {
-                document.getElementById("message").innerText = "Wypełnij wszystkie pola!";
-                return;
-            }
-
-            const users = await fetchUsers();
-
-            if (isRegistering) {
-                if (users[username]) {
-                    document.getElementById("message").innerText = "Nazwa użytkownika jest już zajęta!";
-                } else {
-                    users[username] = password;
-                    await saveUsers(users);
-                    document.getElementById("message").innerText = "Rejestracja udana! Możesz się teraz zalogować.";
-                    toggleForm();
-                }
-            } else {
-                if (users[username] && users[username] === password) {
-                    localStorage.setItem("loggedUser", username);
-                    window.location.href = "notes.html";
-                } else {
-                    document.getElementById("message").innerText = "Nieprawidłowa nazwa użytkownika lub hasło!";
-                }
-            }
-        }
-    </script>
+  <script src="script.js"></script>
 </body>
 </html>
