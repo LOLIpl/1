@@ -37,25 +37,20 @@ async function loadAll() {
     state.tvChannels = results[2].status === 'fulfilled' && Array.isArray(results[2].value) ? results[2].value : [];
 
     await tmdbCacheClearExpired();
+
+    // Initial render (shows placeholders for items without poster)
     renderAll();
 
-    // Background TMDB fetch - first 200 of each
-    setTimeout(function() {
-      fetchTMDBBatch(state.movies.slice(0, 200), 'movie').then(function() {
-        if (!state.isSearching) renderAll();
-      });
-    }, 100);
-    setTimeout(function() {
-      fetchTMDBBatch(state.serials.slice(0, 200), 'tv').then(function() {
-        if (!state.isSearching) renderAll();
-      });
-    }, 500);
+    // TMDB enrichment - first batch, then render again with posters
+    var update = function() { if (!state.isSearching) renderAll(); };
+    fetchTMDBBatch(state.movies.slice(0, 200), 'movie').then(update);
+    fetchTMDBBatch(state.serials.slice(0, 50), 'tv').then(update);
 
     // Remaining items
     setTimeout(function() {
-      fetchTMDBBatch(state.movies.slice(200), 'movie');
-      fetchTMDBBatch(state.serials.slice(200), 'tv');
-    }, 10000);
+      fetchTMDBBatch(state.movies.slice(200), 'movie').then(update);
+      fetchTMDBBatch(state.serials.slice(50), 'tv').then(update);
+    }, 5000);
 
   } catch (e) {
     console.error(e);

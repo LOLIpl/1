@@ -46,7 +46,7 @@ function closeTvChannel() {
 
 /* -- ADD CATEGORY -- */
 function addCategory(name, list, container, isSerial) {
-  var valid = list.filter(function(m) { return m.poster; }).slice(0, CONFIG.ITEMS_PER_CATEGORY_HOME);
+  var valid = list.slice(0, CONFIG.ITEMS_PER_CATEGORY_HOME);
   if (!valid.length) return;
 
   var section = document.createElement("div");
@@ -102,13 +102,12 @@ function renderMovieCategories() {
   var content = document.getElementById("content");
   content.innerHTML = "";
 
-  var withPoster = state.movies.filter(function(m) { return m.poster; });
-  var byRating = [].concat(withPoster).sort(function(a, b) { return (b.rating || 0) - (a.rating || 0); });
-  var byWorstRating = [].concat(withPoster).sort(function(a, b) { return (a.rating || 0) - (b.rating || 0); });
-  var byNewest = [].concat(withPoster).sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
-  var byOldest = [].concat(withPoster).sort(function(a, b) { return (a.year || 0) - (b.year || 0); });
-  var byRecent = [].concat(withPoster).reverse();
-  var recommended = shuffleImmutable(withPoster).slice(0, CONFIG.RECOMMENDED_COUNT);
+  var byRating = [].concat(state.movies).sort(function(a, b) { return (b.rating || 0) - (a.rating || 0); });
+  var byWorstRating = [].concat(state.movies).sort(function(a, b) { return (a.rating || 0) - (b.rating || 0); });
+  var byNewest = [].concat(state.movies).sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
+  var byOldest = [].concat(state.movies).sort(function(a, b) { return (a.year || 0) - (b.year || 0); });
+  var byRecent = [].concat(state.movies).reverse();
+  var recommended = shuffleImmutable(state.movies).slice(0, CONFIG.RECOMMENDED_COUNT);
 
   var allCategories = [
     { name: "Polecane", list: recommended },
@@ -144,12 +143,11 @@ function renderSerialCategories() {
     return;
   }
 
-  var withPoster = state.serials.filter(function(s) { return s.poster; });
-  var byRating = [].concat(withPoster).sort(function(a, b) { return (b.rating || 0) - (a.rating || 0); });
-  var byWorstRating = [].concat(withPoster).sort(function(a, b) { return (a.rating || 0) - (b.rating || 0); });
-  var byNewest = [].concat(withPoster).sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
-  var byRecent = [].concat(withPoster).reverse();
-  var recommended = shuffleImmutable(withPoster).slice(0, CONFIG.RECOMMENDED_COUNT);
+  var byRating = [].concat(state.serials).sort(function(a, b) { return (b.rating || 0) - (a.rating || 0); });
+  var byWorstRating = [].concat(state.serials).sort(function(a, b) { return (a.rating || 0) - (b.rating || 0); });
+  var byNewest = [].concat(state.serials).sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
+  var byRecent = [].concat(state.serials).reverse();
+  var recommended = shuffleImmutable(state.serials).slice(0, CONFIG.RECOMMENDED_COUNT);
 
   var allCategories = [
     { name: "Polecane", list: recommended },

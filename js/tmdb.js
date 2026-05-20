@@ -60,8 +60,8 @@ async function fetchTMDBBatch(list, type = 'movie') {
 
   // Replace poster with smaller size for items that already have it
   results.forEach(r => {
-    if (r.status === "fulfilled" && r.value.tmdb?.poster_path && item.poster) {
-      item.poster = "https://image.tmdb.org/t/p/w342" + r.value.tmdb.poster_path;
+    if (r.status === "fulfilled" && r.value.item && r.value.tmdb?.poster_path) {
+      r.value.item.poster = "https://image.tmdb.org/t/p/w342" + r.value.tmdb.poster_path;
     }
   });
 }
