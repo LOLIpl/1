@@ -92,8 +92,10 @@ function buildCard(item, isSerial, delay) {
   var rating = item.rating ? " - ★ " + item.rating : "";
   var pid = makePid(itemId, isSerial);
 
-  card.innerHTML = '<div class="' + thumbClass + '">' +
-    '<img src="' + posterUrl + '" alt="' + escapeHtml(item.title) + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,%253Csvg xmlns=%2522http://www.w3.org/2000/svg%2522 width=%2522400%2522 height=%2522600%2522%253E%253Crect width=%2522400%2522 height=%2522600%2522 fill=%2522%252318181d%2522/%253E%253Ctext x=%252250%2525%2522 y=%252250%2525%2522 dominant-baseline=%2522middle%2522 text-anchor=%2522middle%2522 fill=%2522%25237a7870%2522 font-family=%2522sans-serif%2522 font-size=%252214%2522%253E' + (isSerial ? 'SERIAL' : 'FILM') + '%253C/text%253E%253C/svg%253E\'">' +
+  var imgHtml = posterUrl
+    ? '<img src="' + posterUrl + '" alt="' + escapeHtml(item.title) + '" loading="lazy" onerror="this.onerror=null;this.style.display=\'none\';">'
+    : '';
+  card.innerHTML = '<div class="' + thumbClass + '">' + imgHtml +
     '<div class="movie-overlay">' +
     '<button class="mini-play">▶</button>' +
     '<button class="card-fav-btn" data-pid="' + pid + '" data-istv="' + isSerial + '" title="Ulubione">♥</button>' +
