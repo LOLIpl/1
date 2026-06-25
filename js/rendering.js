@@ -102,6 +102,7 @@ function renderMovieCategories() {
   var content = document.getElementById("content");
   content.innerHTML = "";
 
+  var withPoster = state.movies.filter(function(m) { return m.poster; });
   var byRating = [].concat(state.movies).sort(function(a, b) { return (b.rating || 0) - (a.rating || 0); });
   var byWorstRating = [].concat(state.movies).sort(function(a, b) { return (a.rating || 0) - (b.rating || 0); });
   var byNewest = [].concat(state.movies).sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
@@ -143,6 +144,7 @@ function renderSerialCategories() {
     return;
   }
 
+  var withPoster = state.serials.filter(function(m) { return m.poster; });
   var byRating = [].concat(state.serials).sort(function(a, b) { return (b.rating || 0) - (a.rating || 0); });
   var byWorstRating = [].concat(state.serials).sort(function(a, b) { return (a.rating || 0) - (b.rating || 0); });
   var byNewest = [].concat(state.serials).sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
