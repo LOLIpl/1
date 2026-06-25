@@ -12,7 +12,7 @@ const CONFIG = {
   RECOMMENDED_COUNT: 5,
   TMDB_CHUNK_SIZE: 20,
   RENDER_CHUNK_SIZE: 20,
-  TMDB_RATE_LIMIT_MS: 150,
+  TMDB_RATE_LIMIT_MS: 300,
   GENRE_NAMES: {
     28: "Akcja", 12: "Przygodowy", 16: "Animacja", 35: "Komedia",
     80: "Kryminał", 18: "Dramat", 14: "Fantasy", 27: "Horror",

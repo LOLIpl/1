@@ -25,14 +25,24 @@ async function fetchTmdbSingle(item, type = 'movie') {
   if (cached) return { item, tmdb: cached };
 
   const url = `https://api.themoviedb.org/3/search/${type}?api_key=${CONFIG.TMDB_KEY}&query=${encodeURIComponent(q)}&language=pl-PL`;
-  const res = await fetch(url);
-  if (!res.ok) return { item, tmdb: null };
-  const data = await res.json();
-  const first = data.results?.[0] || null;
-  if (first) {
-    await tmdbCacheSet(cacheKey, first);
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const first = data.results?.[0] || null;
+      if (first) {
+        await tmdbCacheSet(cacheKey, first);
+      }
+      return { item, tmdb: first };
+    }
+    if (res.status === 429) {
+      await new Promise(r => setTimeout(r, 1000));
+      continue;
+    }
+    return { item, tmdb: null };
   }
-  return { item, tmdb: first };
+  return { item, tmdb: null };
 }
 
 function enqueueTmdbRequest(item, type) {
