@@ -1,19 +1,13 @@
 /* -- Service Worker for TvSuper (GitHub Pages) -- */
-const CACHE_NAME = 'tvsuper-v2';
+const CACHE_NAME = 'tvsuper-v3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
+  '/detail.html',
   '/css/main.css',
   '/css/detail.css',
-  '/js/shared.js',
-  '/js/auth.js',
-  '/js/indexeddb.js',
-  '/js/tmdb.js',
-  '/js/ui.js',
-  '/js/search.js',
-  '/js/favorites.js',
-  '/js/rendering.js',
-  '/js/app.js',
+  '/js/index.js',
+  '/js/detail.js',
   '/manifest.json',
   '/favicon.ico',
   '/favicon.png',
