@@ -201,23 +201,27 @@ async function tmdbCacheClearExpired() {
 }
 
 /* ── TMDB with rate limiting + IndexedDB caching ── */
+/* ── TMDB z wspolbieznoscia 5 + progresywny render ── */
+const TMDB_CONCURRENCY = 5;
 let tmdbQueue = [];
-let tmdbProcessing = false;
+let tmdbActive = 0;
 
-async function processTmdbQueue() {
-  if (tmdbProcessing) return;
-  tmdbProcessing = true;
-  while (tmdbQueue.length > 0) {
+function processTmdbQueue() {
+  while (tmdbQueue.length > 0 && tmdbActive < TMDB_CONCURRENCY) {
+    tmdbActive++;
     const task = tmdbQueue.shift();
-    try {
-      const data = await fetchTmdbSingle(task.item, task.type);
-      task.resolve(data);
-    } catch (e) {
-      task.reject(e);
-    }
-    await new Promise(r => setTimeout(r, CONFIG.TMDB_RATE_LIMIT_MS));
+    (async () => {
+      try {
+        const data = await fetchTmdbSingle(task.item, task.type);
+        task.resolve(data);
+      } catch (e) {
+        task.reject(e);
+      } finally {
+        tmdbActive--;
+        processTmdbQueue();
+      }
+    })();
   }
-  tmdbProcessing = false;
 }
 
 async function fetchTmdbSingle(item, type = 'movie') {
@@ -254,21 +258,38 @@ function enqueueTmdbRequest(item, type) {
   });
 }
 
+function applyTmdbToItem(item, tmdb, type) {
+  if (tmdb.poster_path) item.poster = "https://image.tmdb.org/t/p/w342" + tmdb.poster_path;
+  if (tmdb.backdrop_path) item.backdrop = "https://image.tmdb.org/t/p/w1280" + tmdb.backdrop_path;
+  item.rating = tmdb.vote_average ? +tmdb.vote_average.toFixed(1) : null;
+  item.year = (type === 'movie' ? tmdb.release_date : tmdb.first_air_date)?.slice(0, 4) || null;
+  item.genres = tmdb.genre_ids || [];
+  item.description = tmdb.overview || "";
+  item.popularity = tmdb.popularity || 0;
+  if (type === 'tv') item._tmdbName = tmdb.name || "";
+}
+
 async function fetchTMDBBatch(list, type = 'movie') {
-  const promises = list.map(item => enqueueTmdbRequest(item, type));
-  const results = await Promise.allSettled(promises);
-  results.forEach(r => {
-    if (r.status !== "fulfilled" || !r.value.tmdb) return;
-    const { item, tmdb } = r.value;
-    if (tmdb.poster_path) item.poster = "https://image.tmdb.org/t/p/w342" + tmdb.poster_path;
-    if (tmdb.backdrop_path) item.backdrop = "https://image.tmdb.org/t/p/w1280" + tmdb.backdrop_path;
-    item.rating = tmdb.vote_average ? +tmdb.vote_average.toFixed(1) : null;
-    item.year = (type === 'movie' ? tmdb.release_date : tmdb.first_air_date)?.slice(0, 4) || null;
-    item.genres = tmdb.genre_ids || [];
-    item.description = tmdb.overview || "";
-    item.popularity = tmdb.popularity || 0;
-    if (type === 'tv') item._tmdbName = tmdb.name || "";
-  });
+  let count = 0;
+  const total = list.length;
+  if (!total) return [];
+
+  const results = await Promise.allSettled(
+    list.map(item => {
+      return enqueueTmdbRequest(item, type).then(result => {
+        if (result && result.tmdb) {
+          applyTmdbToItem(result.item, result.tmdb, type);
+        }
+        count++;
+        if (count % 20 === 0 || count === total) {
+          if (!state.isSearching) renderAll();
+        }
+        return result;
+      });
+    })
+  );
+
+  return results;
 }
 
 /* -- UI: Sidebar, Auth Modal, Rendering, Cards -- */
@@ -1006,15 +1027,14 @@ async function loadAll() {
     // Initial render (shows placeholders for items without poster)
     renderAll();
 
-    // TMDB enrichment - first batch, then render again with posters
-    var update = function() { if (!state.isSearching) renderAll(); };
-    fetchTMDBBatch(state.movies.slice(0, 200), 'movie').then(update);
-    fetchTMDBBatch(state.serials.slice(0, 50), 'tv').then(update);
+    // TMDB enrichment (progressive render co 20 pozycji)
+    fetchTMDBBatch(state.movies.slice(0, 200), 'movie');
+    fetchTMDBBatch(state.serials.slice(0, 50), 'tv');
 
     // Remaining items
     setTimeout(function() {
-      fetchTMDBBatch(state.movies.slice(200), 'movie').then(update);
-      fetchTMDBBatch(state.serials.slice(50), 'tv').then(update);
+      fetchTMDBBatch(state.movies.slice(200), 'movie');
+      fetchTMDBBatch(state.serials.slice(50), 'tv');
     }, 5000);
 
   } catch (e) {
