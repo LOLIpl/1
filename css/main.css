@@ -233,3 +233,13 @@ body.tab-tv .movie:hover .mini-play{background:var(--accent-tv)}
 .nav-btn svg{flex-shrink:0}
 body.tab-serials .sb-search input:focus{border-color:var(--accent-tv)}
 body.tab-tv .tab-btn[data-tab="tv"]{color:var(--accent-tv)}
+/* ── LOADING SCREEN ── */
+.loading-screen{position:fixed;inset:0;background:var(--bg);z-index:10000;display:none;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.5s ease}
+.loading-screen.active{display:flex}
+.loading-screen.fade-out{opacity:0}
+.loading-content{display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+.loading-logo{width:80px;height:80px;object-fit:contain;animation:pulse 2s ease-in-out infinite}
+.loading-spinner-large{width:50px;height:50px;border:3px solid var(--surface2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+.loading-text{color:var(--muted);font-size:0.9rem;letter-spacing:0.05em}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.1);opacity:0.8}}
+@keyframes spin{to{transform:rotate(360deg)}}

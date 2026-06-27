@@ -17,6 +17,14 @@
 </head>
 <body>
 
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-content">
+      <img src="favicon.ico" alt="TvSuper" class="loading-logo">
+      <div class="loading-spinner-large"></div>
+      <p class="loading-text">Ładowanie biblioteki...</p>
+    </div>
+  </div>
+
   <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
   </button>
@@ -106,7 +114,6 @@
 
   <script src="js/index.js"></script>
   <script>
-    // Register service worker (only if supported)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('/sw.js').catch(function(err) {

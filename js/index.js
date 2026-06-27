@@ -37,7 +37,7 @@ const state = {
 };
 
 /* ── UTILS ── */
-function showToast(msg, type = 'info') {
+function showToast(msg, type) {
   const t = document.getElementById('toast');
   if (!t) return;
   t.textContent = msg;
@@ -74,6 +74,20 @@ function makePid(itemId, isTv) {
 
 function parsePid(pid) {
   return { id: pid.slice(2), isTv: pid[0] === 's' };
+}
+
+/* ── LOADER ── */
+function showLoader() {
+  var el = document.getElementById('loadingScreen');
+  if (el) el.classList.add('active');
+}
+
+function hideLoader() {
+  var el = document.getElementById('loadingScreen');
+  if (el) {
+    el.classList.add('fade-out');
+    setTimeout(function() { el.classList.remove('active', 'fade-out'); }, 500);
+  }
 }
 
 /* ── AUTH (localStorage-based, stateless for GH Pages) ── */
@@ -133,7 +147,7 @@ function loadAuthFromStorage() {
   try { return JSON.parse(localStorage.getItem(CONFIG.AUTH_KEY)); } catch (e) { return null; }
 }
 
-/* ── IndexedDB cache (replaces localStorage for TMDB) ── */
+/* ── IndexedDB cache ── */
 const DB_NAME = 'TvSuperCache';
 const DB_VERSION = 1;
 const STORE_NAME = 'tmdb';
@@ -201,7 +215,6 @@ async function tmdbCacheClearExpired() {
 }
 
 /* ── TMDB with rate limiting + IndexedDB caching ── */
-/* ── TMDB z wspolbieznoscia 5 + progresywny render ── */
 const TMDB_CONCURRENCY = 5;
 let tmdbQueue = [];
 let tmdbActive = 0;
@@ -224,7 +237,7 @@ function processTmdbQueue() {
   }
 }
 
-async function fetchTmdbSingle(item, type = 'movie') {
+async function fetchTmdbSingle(item, type) {
   const q = item.titleEn || item.title;
   const cacheKey = `${type}_${q}`;
   const cached = await tmdbCacheGet(cacheKey);
@@ -237,9 +250,7 @@ async function fetchTmdbSingle(item, type = 'movie') {
     if (res.ok) {
       const data = await res.json();
       const first = data.results?.[0] || null;
-      if (first) {
-        await tmdbCacheSet(cacheKey, first);
-      }
+      if (first) await tmdbCacheSet(cacheKey, first);
       return { item, tmdb: first };
     }
     if (res.status === 429) {
@@ -269,28 +280,19 @@ function applyTmdbToItem(item, tmdb, type) {
   if (type === 'tv') item._tmdbName = tmdb.name || "";
 }
 
-async function fetchTMDBBatch(list, type = 'movie') {
-  let count = 0;
-  const total = list.length;
-  if (!total) return [];
-  var isSerial = type === 'tv';
-
+async function fetchTMDBBatch(list, type) {
+  if (!list.length) return [];
   const results = await Promise.allSettled(
-    list.map(item => {
-      return enqueueTmdbRequest(item, type).then(result => {
+    list.map(item =>
+      enqueueTmdbRequest(item, type).then(result => {
         if (result && result.tmdb) {
           applyTmdbToItem(result.item, result.tmdb, type);
-          updateSingleCard(result.item, isSerial);
-        }
-        count++;
-        if (count === total) {
-          if (!state.isSearching) renderAll();
+          updateSingleCard(result.item, type === 'tv');
         }
         return result;
-      });
-    })
+      })
+    )
   );
-
   return results;
 }
 
@@ -298,11 +300,23 @@ function updateSingleCard(item, isSerial) {
   if (!item.poster) return;
   var cards = document.querySelectorAll('.movie[data-item-id="' + item.id + '"][data-is-serial="' + isSerial + '"]');
   cards.forEach(function(card) {
+    var thumb = card.querySelector('.movie-thumb');
     var img = card.querySelector('.movie-thumb img');
+    
+    if (!img && thumb) {
+      img = document.createElement('img');
+      img.alt = escapeHtml(item.title) || '';
+      img.loading = 'lazy';
+      img.onerror = function() { this.onerror=null; this.style.display='none'; };
+      img.style.display = '';
+      thumb.insertBefore(img, thumb.firstChild);
+    }
+    
     if (img && img.src !== item.poster) {
       img.src = item.poster;
       img.style.display = '';
     }
+    
     var info = card.querySelector('.movie-info');
     if (info) {
       var yearText = item.year || '';
@@ -318,7 +332,7 @@ function updateSingleCard(item, isSerial) {
 let modalMode = 'login';
 
 function openAuthModal(mode) {
-  if (mode === undefined) mode = 'login';
+  mode = mode || 'login';
   const authModal = document.getElementById('authModal');
   const authTitle = document.getElementById('authTitle');
   const modalSubmit = document.getElementById('modalSubmit');
@@ -379,13 +393,15 @@ function closeSidebar() {
 
 /* -- SKELETONS -- */
 function renderSkeletons(container, count) {
-  if (count === undefined) count = 10;
+  if (count === undefined) count = 12;
   container.innerHTML = '';
   var grid = document.createElement('div');
   grid.className = 'movie-grid';
   for (var i = 0; i < count; i++) {
     var el = document.createElement('div');
-    el.innerHTML = '<div class="skeleton skeleton-thumb"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div>';
+    el.className = 'movie';
+    el.style.opacity = '1';
+    el.innerHTML = '<div class="movie-thumb"><div class="skeleton skeleton-thumb"></div></div><div class="movie-meta"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div>';
     grid.appendChild(el);
   }
   container.appendChild(grid);
@@ -419,7 +435,6 @@ function buildCard(item, isSerial, delay) {
     '<span class="movie-title">' + escapeHtml(item.title) + '</span>' +
     '<span class="movie-info">' + year + ' ' + rating + '</span></div>';
 
-  // Async button state
   (async function() {
     var favs = await getFavorites();
     var planned = await getPlanned();
@@ -580,13 +595,12 @@ function renderCategoryPage(key) {
   categoryViewContent.appendChild(grid);
 }
 
-/* -- ACCENT COLOR (for serial/movie detail pages) -- */
+/* -- ACCENT COLOR -- */
 function getAccent(isSerial) {
   return isSerial ? '#4fa8e8' : '#e8a020';
 }
 
 /* -- SEARCH -- */
-
 function doSearch(query) {
   var content = document.getElementById("content");
   hideCategoryView();
@@ -798,20 +812,20 @@ function addCategory(name, list, container, isSerial) {
   header.appendChild(viewAllBtn);
   section.appendChild(header);
 
-  // Featured item
-  if (valid[0] && valid[0].backdrop) {
+  var featuredItem = valid.find(function(item) { return item.backdrop; }) || valid[0];
+  if (featuredItem && featuredItem.backdrop) {
     var featured = document.createElement("div");
     featured.className = "featured" + (isSerial ? " tv" : "");
-    featured.style.backgroundImage = "url(" + valid[0].backdrop + ")";
-    var itemId = valid[0].id;
-    var desc = valid[0].description ? valid[0].description.slice(0, 120) + "…" : "";
+    featured.style.backgroundImage = "url(" + featuredItem.backdrop + ")";
+    var itemId = featuredItem.id;
+    var desc = featuredItem.description ? featuredItem.description.slice(0, 120) + "…" : "";
     featured.innerHTML = '<div class="featured-overlay"></div>' +
       '<div class="featured-info">' +
-      '<h3>' + escapeHtml(valid[0].title) + '</h3>' +
+      '<h3>' + escapeHtml(featuredItem.title) + '</h3>' +
       '<p>' + escapeHtml(desc) + '</p>' +
       '<div class="featured-meta">' +
-      (valid[0].rating ? '<span class="star">★ ' + valid[0].rating + '</span>' : '') +
-      (valid[0].year ? '<span class="year">' + valid[0].year + '</span>' : '') +
+      (featuredItem.rating ? '<span class="star">★ ' + featuredItem.rating + '</span>' : '') +
+      (featuredItem.year ? '<span class="year">' + featuredItem.year + '</span>' : '') +
       (isSerial ? '<span class="tv-badge">SERIAL</span>' : '') +
       '</div>' +
       '<button class="play-btn' + (isSerial ? ' tv' : '') + '" data-id="' + itemId + '">▶ Ogladaj</button></div>';
@@ -864,6 +878,12 @@ function renderMovieCategories() {
 
   renderFilterBar(content, allCategories, renderMovieCategories);
   var toRender = state.selectedGlobalCategory ? allCategories.filter(function(c) { return c.name === state.selectedGlobalCategory; }) : allCategories;
+  
+  if (state.selectedGlobalCategory && !toRender.length) {
+    content.innerHTML = '<div class="no-results">Brak wyników w kategorii: ' + escapeHtml(state.selectedGlobalCategory) + '</div>';
+    return;
+  }
+  
   toRender.forEach(function(cat) { addCategory(cat.name, cat.list, content, false); });
   initReveal();
 }
@@ -902,6 +922,12 @@ function renderSerialCategories() {
 
   renderFilterBar(content, allCategories, renderSerialCategories);
   var toRender = state.selectedGlobalCategory ? allCategories.filter(function(c) { return c.name === state.selectedGlobalCategory; }) : allCategories;
+  
+  if (state.selectedGlobalCategory && !toRender.length) {
+    content.innerHTML = '<div class="no-results">Brak wyników w kategorii: ' + escapeHtml(state.selectedGlobalCategory) + '</div>';
+    return;
+  }
+  
   toRender.forEach(function(cat) { addCategory(cat.name, cat.list, content, true); });
   initReveal();
 }
@@ -1005,7 +1031,6 @@ function openMovie(id) { window.location.href = "detail.html?id=" + encodeURICom
 function openSerial(id) { window.location.href = "detail.html?id=" + encodeURIComponent(id) + "&type=serial"; }
 
 /* -- APP INIT -- */
-
 function renderAll() {
   if (state.currentTab === "movies") renderMovieCategories();
   else if (state.currentTab === "serials") renderSerialCategories();
@@ -1022,8 +1047,9 @@ function fadeAndRender() {
 }
 
 async function loadAll() {
+  showLoader();
   var content = document.getElementById("content");
-  renderSkeletons(content, 10);
+  renderSkeletons(content, 12);
 
   try {
     var results = await Promise.allSettled([
@@ -1044,14 +1070,14 @@ async function loadAll() {
 
     await tmdbCacheClearExpired();
 
-    // Initial render (shows placeholders for items without poster)
     renderAll();
+    await renderFavorites();
+    
+    hideLoader();
 
-    // TMDB enrichment (progressive render co 20 pozycji)
     fetchTMDBBatch(state.movies.slice(0, 200), 'movie');
     fetchTMDBBatch(state.serials.slice(0, 50), 'tv');
 
-    // Remaining items
     setTimeout(function() {
       fetchTMDBBatch(state.movies.slice(200), 'movie');
       fetchTMDBBatch(state.serials.slice(50), 'tv');
@@ -1059,6 +1085,7 @@ async function loadAll() {
 
   } catch (e) {
     console.error(e);
+    hideLoader();
     content.innerHTML = '<div class="no-results">Blad ladowania danych.<br>Sprawdz pliki JSON.</div>';
     showToast('Blad ladowania danych', 'err');
   }
