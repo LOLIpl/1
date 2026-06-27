@@ -273,15 +273,17 @@ async function fetchTMDBBatch(list, type = 'movie') {
   let count = 0;
   const total = list.length;
   if (!total) return [];
+  var isSerial = type === 'tv';
 
   const results = await Promise.allSettled(
     list.map(item => {
       return enqueueTmdbRequest(item, type).then(result => {
         if (result && result.tmdb) {
           applyTmdbToItem(result.item, result.tmdb, type);
+          updateSingleCard(result.item, isSerial);
         }
         count++;
-        if (count % 20 === 0 || count === total) {
+        if (count === total) {
           if (!state.isSearching) renderAll();
         }
         return result;
@@ -290,6 +292,24 @@ async function fetchTMDBBatch(list, type = 'movie') {
   );
 
   return results;
+}
+
+function updateSingleCard(item, isSerial) {
+  if (!item.poster) return;
+  var cards = document.querySelectorAll('.movie[data-item-id="' + item.id + '"][data-is-serial="' + isSerial + '"]');
+  cards.forEach(function(card) {
+    var img = card.querySelector('.movie-thumb img');
+    if (img && img.src !== item.poster) {
+      img.src = item.poster;
+      img.style.display = '';
+    }
+    var info = card.querySelector('.movie-info');
+    if (info) {
+      var yearText = item.year || '';
+      var ratingText = item.rating ? ' - ★ ' + item.rating : '';
+      info.textContent = yearText + ' ' + ratingText;
+    }
+  });
 }
 
 /* -- UI: Sidebar, Auth Modal, Rendering, Cards -- */
@@ -821,7 +841,7 @@ function renderMovieCategories() {
   var byNewest = [].concat(state.movies).sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
   var byOldest = [].concat(state.movies).sort(function(a, b) { return (a.year || 0) - (b.year || 0); });
   var byRecent = [].concat(state.movies).reverse();
-  var recommended = shuffleImmutable(state.movies).slice(0, CONFIG.RECOMMENDED_COUNT);
+  var recommended = state.movies.slice(0, CONFIG.RECOMMENDED_COUNT);
 
   var allCategories = [
     { name: "Polecane", list: recommended },
@@ -862,7 +882,7 @@ function renderSerialCategories() {
   var byWorstRating = [].concat(state.serials).sort(function(a, b) { return (a.rating || 0) - (b.rating || 0); });
   var byNewest = [].concat(state.serials).sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
   var byRecent = [].concat(state.serials).reverse();
-  var recommended = shuffleImmutable(state.serials).slice(0, CONFIG.RECOMMENDED_COUNT);
+  var recommended = state.serials.slice(0, CONFIG.RECOMMENDED_COUNT);
 
   var allCategories = [
     { name: "Polecane", list: recommended },
